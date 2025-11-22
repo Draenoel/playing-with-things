@@ -1,0 +1,24 @@
+# MLflow Training Examples Requirements
+# ======================================
+# Requirements for running MLflow training examples
+
+# MLflow Core
+# Main MLflow package for experiment tracking and model registry
+mlflow>=2.8.0
+
+# Machine Learning Libraries
+# ==========================
+# Scikit-learn - Machine learning library for model training
+scikit-learn>=1.3.0
+
+# Pandas - Data manipulation
+pandas>=2.0.0
+
+# NumPy - Scientific computing
+numpy>=1.24.0
+
+# Matplotlib - Plotting library (for visualization)
+matplotlib>=3.7.0
+
+# Seaborn - Visualization library that sits on top of matplotlib to make the heatmaps look nice.
+seaborn>=0.12.0
