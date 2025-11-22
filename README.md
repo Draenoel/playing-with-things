@@ -472,3 +472,21 @@ This project is provided as-is for educational and development purposes.
 
 Contributions are welcome! Please open an issue or submit a pull request.
 
+## Disclaimer
+
+**Code Generation Notice**: This project was generated with assistance from Cursor, an AI-powered code editor. While the code follows best practices and has been reviewed, users should:
+
+- Review all code before deploying to production
+- Test thoroughly in their specific environment
+- Update default credentials and secrets
+- Follow security best practices for their use case
+- Verify compatibility with their infrastructure
+
+The codebase includes:
+- SonarQube best practices for code quality
+- Bash scripting best practices (proper error handling, variable quoting, etc.)
+- Docker security best practices
+- Production-ready configurations
+
+However, as with any generated code, it is recommended to perform security audits and testing before production deployment.
+
