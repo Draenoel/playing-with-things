@@ -146,12 +146,13 @@ If you encounter permission errors, make sure:
 - `setup_training_env.sh`: Automated setup script
 - `requirements.txt`: Python dependencies for training examples
 - `venv/`: Virtual environment directory (created by setup script)
-
+- `Legendary_pokemon_predictor.ph`: Script to attempt to find out which pokemon are legendary
 ## Next Steps
+{Pre: get into venv by changing dir into mlflow-training and using the commend venv/bin/activate}
 
 1. Run Example 1 first to get familiar with basic logging
 2. Run Example 2 to see how MLflow handles multiple runs and comparisons
 3. Run Example 3 to register your best model
 4. Use the MLflow UI to explore runs, metrics, and models
 5. Modify hyperparameters and re-run to see versioning in action
-
+6. actual model training scenario with pokemon

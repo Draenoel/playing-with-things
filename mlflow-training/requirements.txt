@@ -20,3 +20,5 @@ numpy>=1.24.0
 # Matplotlib - Plotting library (for visualization)
 matplotlib>=3.7.0
 
+# Seaborn - Visualization library that sits on top of matplotlib to make the heatmaps look nice.
+seaborn>=0.12.0
