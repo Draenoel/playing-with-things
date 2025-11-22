@@ -32,6 +32,9 @@ venv.bak/
 .venv/
 virtualenv/
 .virtualenv/
+# Training environment virtualenv
+mlflow-training/venv/
+mlflow_training/
 
 # Environment Variables
 .env

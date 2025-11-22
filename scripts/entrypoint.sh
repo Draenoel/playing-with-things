@@ -46,9 +46,11 @@ if [[ -n "${MLFLOW_ARTIFACT_ROOT:-}" ]]; then
     artifact_root="${MLFLOW_ARTIFACT_ROOT}"
     echo "Using explicitly configured artifact root: ${artifact_root}"
 elif [[ "${STORAGE_BACKEND}" == "${STORAGE_BACKEND_LOCAL}" ]]; then
-    # Use local filesystem storage
-    artifact_root="${LOCAL_STORAGE_PATH}"
-    echo "Using local filesystem storage: ${artifact_root}"
+    # When using local storage with --serve-artifacts, use mlflow-artifacts:/ URI
+    # This tells clients to upload artifacts via HTTP to the tracking server
+    artifact_root="mlflow-artifacts:/"
+    echo "Using local filesystem storage with artifact serving: ${artifact_root}"
+    echo "Artifacts will be stored in: ${LOCAL_STORAGE_PATH#file:}"
 elif [[ "${STORAGE_BACKEND}" == "${STORAGE_BACKEND_S3}" ]]; then
     # Use S3/MinIO storage
     readonly minio_bucket_name="${MINIO_BUCKET_NAME:-mlflow-artifacts}"
@@ -77,10 +79,26 @@ fi
 
 # Start MLflow server
 # Using exec to replace shell process and handle signals properly
-exec mlflow server \
-    --host "${MLFLOW_HOST}" \
-    --port "${MLFLOW_PORT}" \
-    --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
-    --default-artifact-root "${artifact_root}" \
-    --workers "${MLFLOW_WORKERS}"
+# When using local storage, enable artifact serving via HTTP to allow remote clients
+# to upload artifacts without needing direct file system access
+if [[ "${STORAGE_BACKEND}" == "${STORAGE_BACKEND_LOCAL}" ]]; then
+    # Extract the path from file:// URI for artifacts-destination
+    readonly artifacts_dest="${LOCAL_STORAGE_PATH#file:}"
+    exec mlflow server \
+        --host "${MLFLOW_HOST}" \
+        --port "${MLFLOW_PORT}" \
+        --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
+        --default-artifact-root "${artifact_root}" \
+        --serve-artifacts \
+        --artifacts-destination "${artifacts_dest}" \
+        --workers "${MLFLOW_WORKERS}"
+else
+    # For S3 storage, artifacts are handled via S3 API, no need for serve-artifacts
+    exec mlflow server \
+        --host "${MLFLOW_HOST}" \
+        --port "${MLFLOW_PORT}" \
+        --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
+        --default-artifact-root "${artifact_root}" \
+        --workers "${MLFLOW_WORKERS}"
+fi
 
