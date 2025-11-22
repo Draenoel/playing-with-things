@@ -1,0 +1,212 @@
+version: '3.8'
+
+# =============================================================================
+# Production Docker Compose Override
+# =============================================================================
+# This file extends docker-compose.yml with production-specific configurations
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Production considerations:
+# - Resource limits and reservations
+# - Security hardening
+# - Backup strategies
+# - Monitoring and logging
+# - Health checks
+# - Restart policies
+
+services:
+  # PostgreSQL Production Configuration
+  postgres:
+    restart: always
+    # Resource limits to prevent resource exhaustion
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Enhanced logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Security: Run as non-root user (PostgreSQL image handles this)
+    # Additional security options
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "effective_cache_size=1536MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+    # Backup volume (optional, for automated backups)
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./backups/postgres:/backups
+    # Health check with stricter settings
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mlflow} -d ${POSTGRES_DB:-mlflow}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MinIO Production Configuration
+  minio:
+    restart: always
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Enhanced logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Production MinIO settings
+    environment:
+      # Enable MinIO server-side encryption (optional)
+      # MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-}
+      # Enable compression
+      MINIO_COMPRESS: "true"
+      MINIO_COMPRESS_EXTENSIONS: ".txt,.log,.json,.csv,.tar,.gz"
+      # Cache settings for better performance
+      MINIO_CACHE_DRIVES: ""
+      MINIO_CACHE_QUOTA: "80"
+      MINIO_CACHE_AFTER: "0"
+      MINIO_CACHE_WATERMARK_LOW: "70"
+      MINIO_CACHE_WATERMARK_HIGH: "90"
+    # Backup volume
+    volumes:
+      - ./data/minio:/data
+      - ./scripts:/scripts
+      - ./backups/minio:/backups
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+
+  # MLflow Production Configuration
+  mlflow:
+    restart: always
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    # Enhanced logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Production environment variables
+    environment:
+      # Increase workers for production load
+      MLFLOW_WORKERS: ${MLFLOW_WORKERS:-8}
+      # Gunicorn worker configuration (if using gunicorn)
+      # GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      # GUNICORN_WORKER_CLASS: "sync"
+      # GUNICORN_TIMEOUT: "120"
+      # GUNICORN_MAX_REQUESTS: "1000"
+      # GUNICORN_MAX_REQUESTS_JITTER: "50"
+      # Python optimization
+      PYTHONOPTIMIZE: "2"
+      # Disable Python bytecode generation in production
+      PYTHONDONTWRITEBYTECODE: "1"
+      # Set timezone (adjust as needed)
+      TZ: ${TZ:-UTC}
+    # Health check with production settings
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # Security: Run as non-root user (add to Dockerfile)
+    # user: "1000:1000"  # Uncomment and adjust if running as non-root
+
+# =============================================================================
+# Production Network Configuration
+# =============================================================================
+networks:
+  mlflow-network:
+    driver: bridge
+    # Enable IPAM for better network control
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+    # Additional network options for production
+    # driver_opts:
+    #   com.docker.network.bridge.name: mlflow-br0
+    #   com.docker.network.driver.mtu: "1500"
+
+# =============================================================================
+# Production Volume Configuration
+# =============================================================================
+volumes:
+  postgres-data:
+    driver: local
+    # Use named volumes for better Docker management
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/postgres/data
+  minio-data:
+    driver: local
+    # Use named volumes for better Docker management
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/minio/data
+
+# =============================================================================
+# Production Recommendations
+# =============================================================================
+# 1. Use Docker secrets for sensitive data instead of .env files
+# 2. Set up reverse proxy (nginx/traefik) with SSL/TLS
+# 3. Implement log aggregation (ELK stack, Loki, etc.)
+# 4. Set up monitoring (Prometheus + Grafana)
+# 5. Configure automated backups
+# 6. Use read-only root filesystem where possible
+# 7. Implement network policies and firewall rules
+# 8. Regular security updates and vulnerability scanning
+# 9. Use Docker content trust for image verification
+# 10. Implement resource quotas at the host level
+
