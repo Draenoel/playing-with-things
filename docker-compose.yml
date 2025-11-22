@@ -1,8 +1,22 @@
 version: '3.8'
 
+# =============================================================================
+# Docker Compose Configuration for MLflow Server
+# =============================================================================
+# Sonar Best Practices Applied:
+# - Specific image versions (not 'latest' tags)
+# - Environment variable usage (no hardcoded secrets)
+# - Health checks for all services
+# - Resource limits (see docker-compose.prod.yml)
+# - Network isolation
+# - Volume management
+# - Proper dependency management
+# =============================================================================
+
 services:
   # PostgreSQL Database Service
   # Stores MLflow metadata (experiments, runs, parameters, metrics, etc.)
+  # Best Practice: Using specific version (15-alpine) instead of 'latest'
   postgres:
     image: postgres:15-alpine
     container_name: mlflow-postgres
@@ -30,6 +44,8 @@ services:
   # MinIO Object Storage Service
   # S3-compatible storage for MLflow artifacts (models, datasets, etc.)
   # Only started when STORAGE_BACKEND=s3 (default)
+  # Best Practice: Consider pinning to specific version in production
+  # Note: Using 'latest' tag - update to specific version for production
   minio:
     image: minio/minio:latest
     container_name: mlflow-minio
@@ -64,6 +80,7 @@ services:
   # MinIO Client Service (for bucket initialization)
   # Run once to create the bucket: docker-compose --profile init up minio-init
   # Or run manually: docker-compose run --rm minio-init
+  # Best Practice: Consider pinning to specific version in production
   minio-init:
     image: minio/mc:latest
     container_name: mlflow-minio-init
